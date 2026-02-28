@@ -1,49 +1,59 @@
-# hoa-jwt-permission
+# @chaeco/jwt-permission
 
-JWT 权限管理中间件，用于 Hoa.js 框架的路由权限控制。
+English | [中文](./README-zh.md)
 
-## 功能
+[![version](https://img.shields.io/badge/version-1.0.1-blue.svg)](./CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](./coverage)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](./package.json)
 
-- ✅ 基于路由配置的权限管理
-- ✅ 自动从 autoRouter 发现路由权限信息（无需手动维护列表）
-- ✅ 支持公开路由和受保护路由
-- ✅ 支持路径参数匹配（如 `/api/users/:userId`）
-- ✅ 自定义路由匹配逻辑
-- ✅ 自定义未授权错误响应
-- ✅ 完整的 TypeScript 支持
+Framework-agnostic JWT route permission middleware for Node.js. Compatible with Hoa, Koa, Express, and any framework that uses a `ctx.state.user` convention.
 
-## 安装
+## Features
 
-使用 SSH：
+- ✅ **Framework-agnostic** — works with Hoa, Koa, Express, and more
+- ✅ Route-based permission control
+- ✅ Auto-discovery via `@chaeco/auto-router` — no manual route lists needed
+- ✅ Public and protected route support
+- ✅ Path parameter matching (e.g. `/api/users/:userId`)
+- ✅ URL-decode safety — prevents `%xx` encoding bypass attacks
+- ✅ Custom route matching logic
+- ✅ Custom unauthorized response handler
+- ✅ Full TypeScript generics support
+
+## Installation
+
+This package is not yet published to npm. Install directly from GitHub:
 
 ```bash
-npm install git+ssh://git@github.com/chaeco/hoa-jwt-permission.git
+npm install github:chaeco/jwt-permission
 ```
 
-或使用 HTTPS：
+Or pin to a specific tag:
 
 ```bash
-npm install git+https://github.com/chaeco/hoa-jwt-permission.git
+npm install github:chaeco/jwt-permission#v1.0.1
 ```
 
-## 快速开始
+## Quick Start
 
-### 方式 1: 自动发现（推荐）
+### Option 1: Auto-discovery (Recommended)
 
-配合 `@chaeco/hoa-auto-router` 使用，自动读取路由权限信息：
+Use with `@chaeco/auto-router` to automatically read route permission metadata:
 
 ```typescript
-import { jwtAuth } from '@chaeco/hoa-jwt-permission'
-import { autoRouter } from '@chaeco/hoa-auto-router'
+import { jwtAuth } from '@chaeco/jwt-permission'
+import { autoRouter } from '@chaeco/auto-router'
 
-// autoRouter 会发现 controllers/ 中的路由，并提取权限元数据
+// autoRouter scans controllers/ and extracts permission metadata
 app.extend(
   autoRouter({
     defaultRequiresAuth: false,
   })
 )
 
-// jwtAuth 自动从 autoRouter 读取权限配置
+// jwtAuth reads permission config automatically from autoRouter
 app.use(
   jwtAuth({
     autoDiscovery: true,
@@ -51,10 +61,10 @@ app.use(
 )
 ```
 
-### 方式 2: 手动配置
+### Option 2: Manual configuration
 
 ```typescript
-import { jwtAuth } from '@chaeco/hoa-jwt-permission'
+import { jwtAuth } from '@chaeco/jwt-permission'
 
 app.use(
   jwtAuth({
@@ -70,10 +80,10 @@ app.use(
 )
 ```
 
-### 在控制器中使用
+### Using in a controller
 
 ```typescript
-import { getCurrentUser } from '@chaeco/hoa-jwt-permission'
+import { getCurrentUser } from '@chaeco/jwt-permission'
 
 async function getInfoHandler(ctx) {
   const user = getCurrentUser(ctx)
@@ -85,260 +95,292 @@ async function getInfoHandler(ctx) {
 
 ### `jwtAuth(options)`
 
-创建 JWT 权限中间件（`createJwtPermission` 的简写别名）。
+Creates a JWT permission middleware (shorthand alias for `createJwtPermission`).
 
-**参数**：
+**Options**:
 
-- `options` (object)
-  - `autoDiscovery` (boolean) - 是否启用自动发现（默认 true）
-  - `publicRoutes` (RouteRule[]) - 公开路由列表（可选）
-  - `protectedRoutes` (RouteRule[]) - 受保护路由列表（可选）
-  - `unauthorizedResponse` (function) - 自定义未授权响应
-  - `isPublicRoute` (function) - 自定义公开路由检查逻辑
-  - `isProtectedRoute` (function) - 自定义受保护路由检查逻辑
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `autoDiscovery` | `boolean` | `true` | Enable auto-discovery from `app.$routes` |
+| `publicRoutes` | `RouteRule[]` | — | Routes that skip JWT verification |
+| `protectedRoutes` | `RouteRule[]` | — | Routes that require JWT verification |
+| `unauthorizedResponse` | `(ctx) => void` | built-in | Custom 401 response handler |
+| `isPublicRoute` | `(method, path) => boolean` | — | Custom public route matcher (overrides built-in) |
+| `isProtectedRoute` | `(method, path) => boolean` | — | Custom protected route matcher (overrides built-in) |
 
-**返回**：HoaMiddleware
+**Returns**: `PermissionMiddleware<TContext>`
 
-### `createJwtPermission(options)`
+> **Built-in `unauthorizedResponse`** auto-detects the framework style:
+> - Hoa style: writes to `ctx.res.status` / `ctx.res.body`
+> - Koa style: writes to `ctx.status` / `ctx.body`
+> - Other frameworks (e.g. Express): **must** provide a custom `unauthorizedResponse`
 
-与 `jwtAuth()` 功能相同（长名称版本）。
+### `createJwtPermission<TContext>(options)`
+
+Same as `jwtAuth()`, with explicit generic support for custom context types:
+
+```typescript
+import { createJwtPermission } from '@chaeco/jwt-permission'
+import type { MyAppContext } from './types'
+
+const middleware = createJwtPermission<MyAppContext>({ ... })
+```
 
 ### `getCurrentUser(ctx)`
 
-获取当前认证的用户信息。
+Returns the authenticated user stored in `ctx.state.user`, or `null` if not authenticated.
 
 ```typescript
 const user = getCurrentUser(ctx)
-// user = { id: 1, username: 'demo', ... }
+// { id: 1, username: 'alice', ... } | null
 ```
 
 ### `isAuthenticated(ctx)`
 
-检查用户是否已认证。
+Returns `true` if `ctx.state.user` is present.
 
 ```typescript
 if (isAuthenticated(ctx)) {
-  // 用户已认证
+  // request is authenticated
 }
 ```
 
-## 与 autoRouter 配合使用
+## Integration with `@chaeco/auto-router`
 
-### 在控制器中标记权限
+### Marking permissions in controllers
 
 ```typescript
 // controllers/users/get-info.ts
-import { createHandler } from '@chaeco/hoa-auto-router'
+import { createHandler } from '@chaeco/auto-router'
 
 export default createHandler(
-  { requiresAuth: true }, // 标记需要认证
-  async (ctx, user) => {
-    return { success: true, data: user }
-  }
+  async ctx => {
+    ctx.res.body = { success: true, data: ctx.state.user }
+  },
+  { requiresAuth: true },
 )
 
 // controllers/auth/post-login.ts
 export default createHandler(
-  { requiresAuth: false }, // 标记公开接口
   async ctx => {
-    // 登录逻辑
-  }
+    // login logic
+  },
+  { requiresAuth: false },
 )
 ```
 
-### 工作流程
+### How it works
 
-1. `autoRouter` 扫描 `controllers/` 目录
-2. 提取 `createHandler()` 的 `requiresAuth` 元数据
-3. 将路由信息存储到 `app.$routes`
-4. `jwtAuth` 启动时自动从 `app.$routes` 读取配置
-5. **无需重复定义路由列表！**
+1. `autoRouter` scans the `controllers/` directory
+2. Extracts `requiresAuth` metadata from `createHandler()` calls
+3. Stores route info in `app.$routes`
+4. `jwtAuth` reads and caches `app.$routes` **on the first request**
+5. **No duplicated route lists needed!**
 
-## 路由规则
+## Route Rules
 
-### 基本配置
+### HTTP methods
 
-```typescript
-const routes = [
-  { method: 'GET', path: '/api/users' },
-  { method: 'POST', path: '/api/posts' },
-  { method: 'DELETE', path: '/api/posts/:id' },
-]
-```
+`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS` — case-insensitive.
 
-### 支持的 HTTP 方法
+### Path format
 
-- GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
+- Must start with `/`
+- Trailing slash is significant (`/api/users` ≠ `/api/users/`)
+- Supports `:paramName` syntax for dynamic segments
+- Wildcards (`*`) are **not** supported — use `isPublicRoute` / `isProtectedRoute` instead
 
-### 路径参数匹配
-
-支持 `:paramName` 格式的参数：
+### Path parameter matching
 
 ```typescript
 { method: 'GET', path: '/api/users/:userId/posts/:postId' }
-// 匹配：/api/users/123/posts/456
+// matches: /api/users/123/posts/456
 ```
 
-## 自定义匹配逻辑
+## Custom Route Matching
 
 ```typescript
-const jwtAuth = jwtAuth({
-  isPublicRoute: (method, path) => {
-    // 自定义逻辑
-    return path.startsWith('/api/public')
-  },
-  isProtectedRoute: (method, path) => {
-    // 自定义逻辑
-    return path.startsWith('/api/admin')
-  },
+import { createJwtPermission } from '@chaeco/jwt-permission'
+
+const middleware = createJwtPermission({
+  isPublicRoute: (method, path) => path.startsWith('/api/public'),
+  isProtectedRoute: (method, path) => path.startsWith('/api/admin'),
 })
 ```
 
-## 自定义错误响应
+> `method` is always uppercase (e.g. `'GET'`). `path` is URL-decoded and query-string-free.
+
+## Custom Unauthorized Response
 
 ```typescript
-const jwtAuth = jwtAuth({
-  autoDiscovery: true,
+import { jwtAuth } from '@chaeco/jwt-permission'
+
+const middleware = jwtAuth({
   unauthorizedResponse: ctx => {
     ctx.res.status = 401
     ctx.res.body = {
       success: false,
-      message: '需要身份验证',
-      code: 'AUTH_REQUIRED',
+      message: 'Authentication required',
+      code: 'UNAUTHORIZED',
     }
   },
 })
 ```
 
-## 与 @hoajs/jwt 配合使用
+## Middleware Order
 
-中间件顺序很重要：
+JWT token parsing **must run before** `jwtAuth`. The upstream JWT middleware is responsible for verifying the token and writing the decoded payload to `ctx.state.user`.
 
 ```typescript
+// Hoa
 import { jwt } from '@hoajs/jwt'
-import { jwtAuth } from '@chaeco/hoa-jwt-permission'
+app.use(jwt({ secret: process.env.JWT_SECRET!, algorithms: ['HS256'] }))
+app.use(jwtAuth({ autoDiscovery: true }))
 
-const middlewares = [
-  // ... 其他中间件 ...
-
-  // 第1层：@hoajs/jwt 验证 token 有效性
-  jwt({ secret: config.jwtSecret, algorithms: ['HS256'] }),
-
-  // 第2层：jwtAuth 检查路由权限
-  jwtAuth({
-    autoDiscovery: true, // 自动从 autoRouter 发现
-  }),
-
-  // ... 其他中间件 ...
-]
-
-middlewares.forEach(middleware => app.use(middleware))
+// Koa
+import koaJwt from 'koa-jwt'
+app.use(koaJwt({ secret: process.env.JWT_SECRET! }))
+app.use(jwtAuth({ autoDiscovery: true }))
 ```
 
-## 执行流程
+## Request Flow
 
 ```text
-请求到达
+Incoming request
   ↓
-[1] @hoajs/jwt（验证 token）
-  ├─ 提取并验证 token 签名和过期时间
-  ├─ 如果有效 → 存储到 ctx.state.user
-  └─ 如果无效 → 返回 401
+[1] JWT parsing middleware
+  ├─ Verify token signature & expiry
+  ├─ Valid   → write decoded payload to ctx.state.user
+  └─ Invalid → return 401
   ↓
-[2] autoRouter（发现并注册路由）
-  ├─ 从 controllers/ 提取路由
-  ├─ 收集权限元数据（requiresAuth）
-  └─ 存储到 app.$routes
+[2] autoRouter (route registration)
+  ├─ Scan controllers/
+  ├─ Collect requiresAuth metadata
+  └─ Store in app.$routes
   ↓
-[3] jwtAuth（检查路由权限）
-  ├─ 检查是否公开路由 → 放行
-  ├─ 检查是否受保护路由
-  │  ├─ 有 ctx.state.user → 放行
-  │  └─ 无 ctx.state.user → 返回 401
-  └─ 其他路由 → 放行
+[3] jwtAuth (permission check)
+  ├─ Public route?    → pass through
+  ├─ Protected route?
+  │  ├─ ctx.state.user exists → pass through
+  │  └─ ctx.state.user absent → return 401
+  └─ Unknown route    → pass through (default allow)
   ↓
-处理器（业务逻辑）
+Route handler (business logic)
 ```
 
-## 最佳实践
+## Best Practices
 
-✅ **应该做**：
+✅ **Do**:
 
-- 使用 `autoDiscovery: true` 与 autoRouter 配合
-- 在控制器中用 `createHandler()` 明确标记权限要求
-- 在中间件后面的控制器中使用 `getCurrentUser()`
-- 定期审计路由权限配置
-- 使用强 JWT secret
+- Use `autoDiscovery: true` together with `@chaeco/auto-router`
+- Explicitly mark route permissions with `createHandler()` in controllers
+- Use `getCurrentUser()` in handlers after the middleware chain
+- Regularly audit route permission configuration
+- Use strong JWT secrets
 
-❌ **不应该做**：
+❌ **Don't**:
 
-- 混合使用自动发现和手动配置
-- 忘记在 `@hoajs/jwt` 之后使用此中间件
-- 在路由匹配中使用正则表达式（使用 `:paramName` 格式）
-- 硬编码敏感端点的权限配置
+- Forget to place JWT token-parsing middleware before `jwtAuth`
+- Use wildcards (`*`) in route rules — use `isPublicRoute` / `isProtectedRoute` instead
+- Hardcode permissions for sensitive endpoints — declare them with `createHandler` in controllers
 
-## 示例
+## Examples
 
-### 完整示例（推荐：与 autoRouter 配合）
+### Hoa + autoRouter (recommended)
 
 ```typescript
 import { Hoa } from 'hoa'
 import { jwt } from '@hoajs/jwt'
-import { jwtAuth, getCurrentUser } from '@chaeco/hoa-jwt-permission'
-import { autoRouter } from '@chaeco/hoa-auto-router'
-import config from './config'
+import { jwtAuth, getCurrentUser } from '@chaeco/jwt-permission'
+import { autoRouter } from '@chaeco/auto-router'
 
 const app = new Hoa()
 
-// 第1层：JWT 验证
-app.use(jwt({ secret: config.jwtSecret, algorithms: ['HS256'] }))
-
-// 第2层：权限检查（自动发现）
+app.use(jwt({ secret: process.env.JWT_SECRET!, algorithms: ['HS256'] }))
 app.use(jwtAuth({ autoDiscovery: true }))
+app.extend(autoRouter({ defaultRequiresAuth: false }))
 
-// 路由发现
-app.extend(
-  autoRouter({
-    defaultRequiresAuth: false,
-  })
-)
-
-// 处理器示例
 app.get('/api/users/info', async ctx => {
-  const user = getCurrentUser(ctx)
-  ctx.res.body = { success: true, data: user }
+  ctx.res.body = { success: true, data: getCurrentUser(ctx) }
 })
 
 app.listen(3000)
 ```
 
-### 类型定义
+### Koa
 
 ```typescript
-interface RouteRule {
-  method: string
-  path: string
-}
+import Koa from 'koa'
+import koaJwt from 'koa-jwt'
+import { jwtAuth } from '@chaeco/jwt-permission'
 
-interface JwtPermissionOptions {
-  autoDiscovery?: boolean
-  publicRoutes?: RouteRule[]
-  protectedRoutes?: RouteRule[]
-  unauthorizedResponse?: (ctx: HoaContext) => void
-  isPublicRoute?: (method: string, path: string) => boolean
-  isProtectedRoute?: (method: string, path: string) => boolean
-}
+const app = new Koa()
+
+app.use(koaJwt({ secret: process.env.JWT_SECRET! }))
+app.use(
+  jwtAuth({
+    publicRoutes: [{ method: 'POST', path: '/api/auth/login' }],
+    protectedRoutes: [{ method: 'GET', path: '/api/profile' }],
+  })
+)
+
+app.listen(3000)
 ```
 
-## 常见问题
+### Express
 
-**Q: 自动发现和手动配置能混合使用吗？**
+Express uses a different `req`/`res` structure. Bridge `req.auth` to `ctx.state.user` and provide a custom `unauthorizedResponse`:
 
-A: 不建议混合使用。建议要么使用 `autoDiscovery: true` 配合 `autoRouter`，要么完全手动配置路由列表。
+```typescript
+import express from 'express'
+import { expressjwt } from 'express-jwt'
+import { jwtAuth } from '@chaeco/jwt-permission'
 
-**Q: 如何排除特定路由？**
+const app = express()
 
-A: 使用 `publicRoutes` 明确指定公开路由即可
+app.use((req, res, next) => {
+  expressjwt({ secret: process.env.JWT_SECRET!, algorithms: ['HS256'] })(req, res, () => {
+    ;(req as any).state = { user: (req as any).auth }
+    next()
+  })
+})
+
+const permission = jwtAuth({
+  publicRoutes: [{ method: 'POST', path: '/api/auth/login' }],
+  protectedRoutes: [{ method: 'GET', path: '/api/profile' }],
+  unauthorizedResponse: ctx => {
+    ;(ctx as any).res.status(401).json({ success: false, code: 'UNAUTHORIZED' })
+  },
+})
+
+app.use((req, res, next) => {
+  permission({ req, res, state: (req as any).state ?? {} } as any, next as any)
+})
+
+app.listen(3000)
+```
+
+## TypeScript
+
+All types are exported directly from the package:
+
+```typescript
+import type {
+  HttpMethod,
+  PermissionContext,
+  PermissionMiddleware,
+  RouteRule,
+  JwtPermissionOptions,
+} from '@chaeco/jwt-permission'
+```
+
+## FAQ
+
+**Q: Can I mix auto-discovery and manual configuration?**
+
+A: Yes. `autoDiscovery` only fills in the side that is not manually provided (`publicRoutes` or `protectedRoutes`). Both sides are independent.
+
+**Q: How do I make a route always public?**
 
 ```typescript
 jwtAuth({
@@ -350,83 +392,29 @@ jwtAuth({
 })
 ```
 
-**Q: 如何处理刷新 token？**
+**Q: How do I handle token refresh?**
 
-A: 在登录端点中实现 token 刷新逻辑，标记为公开路由
-
-```typescript
-{
-  method: 'POST',
-  path: '/api/auth/refresh',  // 公开端点
-}
-```
-
-**Q: 多租户应用如何使用？**
-
-A: 在 `unauthorizedResponse` 中添加租户信息校验
+Mark the refresh endpoint as a public route:
 
 ```typescript
-unauthorizedResponse: ctx => {
-  const user = ctx.state.user
-  const tenantId = ctx.params.tenantId
-  
-  if (user.tenantId !== tenantId) {
-    ctx.res.status = 403
-    ctx.res.body = { error: '无权访问' }
-  }
-}
+{ method: 'POST', path: '/api/auth/refresh' }
 ```
 
-## 集成示例
+**Q: What happens to routes not in either list?**
 
-### 与 Express 集成
+They are allowed through by default (pass-through behavior).
 
-如果使用 Express 而非 Hoa，需要编写适配器：
+## Performance
 
-```typescript
-const expressJwtAuth = (options) => {
-  const middleware = jwtAuth(options)
-  return (req, res, next) => {
-    // 适配 Express 到 Hoa 上下文
-    const ctx = { state: {}, req, res }
-    middleware(ctx, next)
-  }
-}
-```
+- ✅ Route regexes are compiled once and cached at module level
+- ✅ Auto-discovered routes are read and cached on the first request only
+- ✅ When both sides are covered by custom functions, all route list parsing is skipped
+- ✅ Token verification is handled by the upstream JWT middleware — this middleware only checks whether `ctx.state.user` exists
 
-### 日志集成
+## Changelog
 
-```typescript
-import { jwtAuth } from '@chaeco/hoa-jwt-permission'
-import { logger } from '@chaeco/logger'
+See [CHANGELOG.md](./CHANGELOG.md).
 
-const jwtAuthMiddleware = jwtAuth({
-  autoDiscovery: true,
-  unauthorizedResponse: ctx => {
-    logger.warn(`未授权访问: ${ctx.req.method} ${ctx.req.url}`)
-    ctx.res.status = 401
-    ctx.res.body = { error: '未授权' }
-  },
-})
-```
+## License
 
-## 性能考虑
-
-- ✅ 路由匹配使用高效的正则表达式
-- ✅ Token 验证由 `@hoajs/jwt` 处理
-- ✅ 权限检查为同步操作，无性能开销
-- ✅ 自动发现仅在中间件初始化时执行一次
-
-## 更新日志
-
-### v1.0.0 (2024-01)
-
-- 初始发布
-- 支持自动发现
-- 支持手动配置
-- 自定义匹配逻辑
-- TypeScript 支持
-
-## 许可
-
-ISC
+MIT

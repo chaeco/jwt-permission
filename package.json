@@ -1,7 +1,7 @@
 {
-  "name": "@chaeco/hoa-jwt-permission",
-  "version": "1.0.0",
-  "description": "JWT permission middleware for Hoa.js framework",
+  "name": "@chaeco/jwt-permission",
+  "version": "1.0.1",
+  "description": "Framework-agnostic JWT permission middleware for Node.js (Hoa, Koa, Express, etc.)",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -16,7 +16,10 @@
     "build": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc --module esnext --outDir dist/esm --declaration false && echo '{\"type\":\"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc --module commonjs --outDir dist/cjs --declaration false && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json && tsc --emitDeclarationOnly --declaration --declarationDir dist/types",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
   },
   "keywords": [
     "hoa",
@@ -26,16 +29,14 @@
     "authentication"
   ],
   "author": "iptodays",
-  "license": "ISC",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:mflix-team/packages.git",
-    "directory": "packages/hoa-jwt-permission"
+    "url": "https://github.com/chaeco/jwt-permission.git"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
-  },
-  "peerDependencies": {
-    "hoa": "^0.3.0"
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
