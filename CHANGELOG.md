@@ -6,6 +6,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.2] - 2026-06-09
+
+### Added
+
+- **AI tool skills** — bundled skill file (`SKILL.md`) for Claude Code and OpenAI Codex, guiding AI coding assistants on correct middleware order, framework-specific setup (Hoa / Koa / Express), route rule format, and common mistakes
+- **`init-skills` CLI** — `npx jwt-permission-init-skills` copies the skill file into `.claude/skills/` and `.codex/skills/` of the consumer project
+- **CLAUDE.md** — project-level AI usage guide for library consumers
+- `.claude/settings.local.json` — PreCommit hook (`npm test && npm run build`) and permission allowlist
+
+### Changed
+
+- `package.json` added `bin` entry (`jwt-permission-init-skills`), `files` whitelist for included skill directories
+
+### Tests
+
+- Expanded from 52 to 56 tests: mixed-case HTTP method matching, `+` regex escaping in static path segments, double-manual route lists bypassing auto-discovery, `$routes` keys falling back to `[]` when undefined
+- Coverage: **100% statements / branches / functions / lines**
+
+### Docs
+
+- README (EN + ZH) added "AI Tool Skills" section with one-liner install command
+
+---
+
 ## [1.0.1] - 2026-02-28
 
 ### Changed
