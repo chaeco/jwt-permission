@@ -411,6 +411,20 @@ They are allowed through by default (pass-through behavior).
 - ✅ When both sides are covered by custom functions, all route list parsing is skipped
 - ✅ Token verification is handled by the upstream JWT middleware — this middleware only checks whether `ctx.state.user` exists
 
+## AI Tool Skills
+
+This package includes AI agent skills for Claude Code and OpenAI Codex.
+
+After installation, run **one command** to copy the skills into your project:
+
+```bash
+npx jwt-permission-init-skills
+```
+
+This places skill files into `.claude/skills/jwt-permission/` and `.codex/skills/jwt-permission/`.
+AI tools will then enforce correct middleware order, framework-specific setup (Hoa / Koa / Express),
+route rule format, and auth best practices when adding JWT permission checks.
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md).

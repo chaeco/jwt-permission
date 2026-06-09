@@ -717,4 +717,83 @@ describe('createJwtPermission – autoDiscovery', () => {
     await expect(middleware(ctx, next)).resolves.toBeUndefined()
     expect(next).toHaveBeenCalledOnce()
   })
+
+  it('falls back to empty arrays when $routes exists but keys are undefined', async () => {
+    const middleware = createJwtPermission({ autoDiscovery: true })
+    // $routes is defined but publicRoutes is undefined → ?? [] fallback
+    const ctx: PermissionContext = {
+      request: { method: 'GET', url: '/api/test' },
+      state: {},
+      app: { $routes: { publicRoutes: undefined, protectedRoutes: undefined } } as any,
+    }
+    const next = vi.fn(noop)
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+    // Both sides are empty arrays → unknown route → passes through
+    expect(next).toHaveBeenCalledOnce()
+  })
+
+  it('skips auto-discovery when both route lists are manually provided', async () => {
+    // When both publicRoutes AND protectedRoutes are manually provided,
+    // autoDiscovery should skip reading app.$routes entirely
+    const middleware = createJwtPermission({
+      autoDiscovery: true,
+      publicRoutes: [{ method: 'GET', path: '/api/manual-pub' }],
+      protectedRoutes: [{ method: 'GET', path: '/api/manual-prot' }],
+    })
+    // app.$routes has different routes that should NOT be used
+    const ctx = makeAppCtx(
+      [{ method: 'GET', path: '/api/auto-pub' }],
+      [{ method: 'GET', path: '/api/auto-prot' }],
+      'GET',
+      '/api/auto-pub',
+    )
+    ctx.state = {}
+    const next = vi.fn(noop)
+    // /api/auto-pub is NOT in manual publicRoutes → unknown route → passes through
+    await middleware(ctx, next)
+    expect(next).toHaveBeenCalledOnce()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission – method case edge
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – method case edge', () => {
+  it('matches route rule with mixed-case method (e.g. "PoSt")', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [{ method: 'PoSt' as any, path: '/api/mixed' }],
+      protectedRoutes: [],
+    })
+    const ctx = makeHoaCtx({ request: { method: 'POST', url: '/api/mixed' } })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(next).toHaveBeenCalledOnce()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission – regex escaping for all special chars
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – regex escaping', () => {
+  it('escapes + in static path segments', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/v1+fix/users' }],
+      publicRoutes: [],
+    })
+    // /api/v1Xfix/users does NOT match → unknown → passes through
+    const ctxMiss = makeHoaCtx({ request: { method: 'GET', url: '/api/v1Xfix/users' }, state: {} })
+    const nextMiss = vi.fn(noop)
+    await middleware(ctxMiss, nextMiss)
+    expect(nextMiss).toHaveBeenCalledOnce()
+    expect((ctxMiss as any).res.status).toBeUndefined()
+
+    // /api/v1+fix/users matches → protected, no user → 401
+    const ctxHit = makeHoaCtx({ request: { method: 'GET', url: '/api/v1+fix/users' }, state: {} })
+    const nextHit = vi.fn(noop)
+    await middleware(ctxHit, nextHit)
+    expect(nextHit).not.toHaveBeenCalled()
+    expect((ctxHit as any).res.status).toBe(401)
+  })
 })

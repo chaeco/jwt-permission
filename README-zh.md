@@ -441,6 +441,20 @@ unauthorizedResponse: ctx => {
 - ✅ 两侧均由自定义函数覆盖时，跳过所有路由列表解析逻辑
 - ✅ Token 验证由上游 JWT 中间件负责，本中间件仅检查 `ctx.state.user` 是否存在
 
+## AI 工具 Skills
+
+本包内置了 Claude Code 和 OpenAI Codex 的 AI agent skill 文件。
+
+安装后只需运行**一条命令**将 skills 复制进你的项目：
+
+```bash
+npx jwt-permission-init-skills
+```
+
+这会将 skill 文件放置到 `.claude/skills/jwt-permission/` 和 `.codex/skills/jwt-permission/`。
+AI 工具将自动强制执行正确的中间件顺序、框架适配（Hoa / Koa / Express）、
+路由规则格式和认证最佳实践。
+
 ## 更新日志
 
 详见 [CHANGELOG.md](./CHANGELOG.md)。
