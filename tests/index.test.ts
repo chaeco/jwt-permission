@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   createJwtPermission,
   jwtAuth,
-  jwtPermission,
   getCurrentUser,
   isAuthenticated,
 } from '../src/index'
@@ -60,6 +59,14 @@ describe('getCurrentUser', () => {
   it('returns any truthy value stored as user (e.g. string)', () => {
     expect(getCurrentUser({ state: { user: 'token' } })).toBe('token')
   })
+
+  it('returns falsy non-null values as-is (0)', () => {
+    expect(getCurrentUser({ state: { user: 0 } })).toBe(0)
+  })
+
+  it('returns falsy non-null values as-is (false)', () => {
+    expect(getCurrentUser({ state: { user: false } })).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -82,19 +89,27 @@ describe('isAuthenticated', () => {
   it('returns false when state.user is null', () => {
     expect(isAuthenticated({ state: { user: null } })).toBe(false)
   })
+
+  it('returns true when state.user is a falsy non-null value (0)', () => {
+    expect(isAuthenticated({ state: { user: 0 } })).toBe(true)
+  })
+
+  it('returns true when state.user is a falsy non-null value (false)', () => {
+    expect(isAuthenticated({ state: { user: false } })).toBe(true)
+  })
+
+  it('returns true when state.user is a falsy non-null value (empty string)', () => {
+    expect(isAuthenticated({ state: { user: '' } })).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
 // Aliases
 // ---------------------------------------------------------------------------
 
-describe('jwtAuth / jwtPermission aliases', () => {
+describe('jwtAuth alias', () => {
   it('jwtAuth is the same reference as createJwtPermission', () => {
     expect(jwtAuth).toBe(createJwtPermission)
-  })
-
-  it('jwtPermission is the same reference as createJwtPermission', () => {
-    expect(jwtPermission).toBe(createJwtPermission)
   })
 })
 
@@ -551,6 +566,328 @@ describe('createJwtPermission – optional next()', () => {
     const middleware = createJwtPermission({ publicRoutes: [], protectedRoutes: [] })
     const ctx = makeHoaCtx({ request: { method: 'GET', url: '/anything' } })
     await expect(middleware(ctx)).resolves.toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission — defaultDeny
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – defaultDeny', () => {
+  it('passes through unknown route when defaultDeny is false (default)', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [],
+      protectedRoutes: [],
+      defaultDeny: false,
+    })
+    const ctx = makeHoaCtx({ request: { method: 'GET', url: '/api/unknown' } })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(next).toHaveBeenCalledOnce()
+    expect((ctx as any).res.status).toBeUndefined()
+  })
+
+  it('returns 401 for unknown route when defaultDeny is true', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [],
+      protectedRoutes: [],
+      defaultDeny: true,
+    })
+    const ctx = makeHoaCtx({ request: { method: 'GET', url: '/api/unknown' } })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(next).not.toHaveBeenCalled()
+    expect((ctx as any).res.status).toBe(401)
+  })
+
+  it('public route still passes through with defaultDeny: true', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [{ method: 'GET', path: '/api/public' }],
+      protectedRoutes: [],
+      defaultDeny: true,
+    })
+    const ctx = makeHoaCtx({ request: { method: 'GET', url: '/api/public' } })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(next).toHaveBeenCalledOnce()
+  })
+
+  it('protected route with user still passes through with defaultDeny: true', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/secret' }],
+      defaultDeny: true,
+    })
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/secret' },
+      state: { user: { id: 1 } },
+    })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(next).toHaveBeenCalledOnce()
+  })
+
+  it('protected route without user still returns 401 with defaultDeny: true', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/secret' }],
+      defaultDeny: true,
+    })
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/secret' },
+      state: {},
+    })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(next).not.toHaveBeenCalled()
+    expect((ctx as any).res.status).toBe(401)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission — onUnauthorized callback
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – onUnauthorized callback', () => {
+  it('calls onUnauthorized with "no_user" when protected route has no user', async () => {
+    const onUnauthorized = vi.fn()
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/secret' }],
+      onUnauthorized,
+    })
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/secret' },
+      state: {},
+    })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(onUnauthorized).toHaveBeenCalledWith(ctx, 'no_user')
+  })
+
+  it('calls onUnauthorized with "default_deny" when defaultDeny rejects unknown route', async () => {
+    const onUnauthorized = vi.fn()
+    const middleware = createJwtPermission({
+      publicRoutes: [],
+      protectedRoutes: [],
+      defaultDeny: true,
+      onUnauthorized,
+    })
+    const ctx = makeHoaCtx({ request: { method: 'GET', url: '/api/unknown' } })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(onUnauthorized).toHaveBeenCalledWith(ctx, 'default_deny')
+  })
+
+  it('does not call onUnauthorized when public route is accessed', async () => {
+    const onUnauthorized = vi.fn()
+    const middleware = createJwtPermission({
+      publicRoutes: [{ method: 'GET', path: '/api/public' }],
+      onUnauthorized,
+    })
+    const ctx = makeHoaCtx({ request: { method: 'GET', url: '/api/public' } })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('does not call onUnauthorized when protected route has user', async () => {
+    const onUnauthorized = vi.fn()
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/secret' }],
+      onUnauthorized,
+    })
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/secret' },
+      state: { user: { id: 1 } },
+    })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('does not block response when onUnauthorized throws', async () => {
+    const onUnauthorized = vi.fn(() => { throw new Error('callback error') })
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/secret' }],
+      onUnauthorized,
+    })
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/secret' },
+      state: {},
+    })
+    const next = vi.fn(noop)
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+    // 响应仍应发送
+    expect((ctx as any).res.status).toBe(401)
+    expect(next).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission — res: null edge case
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – res: null edge case', () => {
+  it('does not crash when ctx.res is null', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/secret' }],
+    })
+    const ctx: PermissionContext = {
+      request: { method: 'GET', url: '/api/secret' },
+      state: {},
+      res: null as any,
+    }
+    const next = vi.fn(noop)
+    await expect(middleware(ctx, next)).resolves.toBeUndefined()
+    // 回退到 Koa 风格
+    expect(ctx.status).toBe(401)
+    expect((ctx as any).body?.code).toBe('UNAUTHORIZED')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission — trailing slash significance
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – trailing slash significance', () => {
+  it('distinguishes /api/users from /api/users/', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/users' }],
+    })
+    // /api/users/ should NOT match /api/users
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/users/' },
+      state: {},
+    })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    // 未匹配 → unknown → 放行
+    expect(next).toHaveBeenCalledOnce()
+    expect((ctx as any).res.status).toBeUndefined()
+  })
+
+  it('matches /api/users/ with trailing slash in rule', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/users/' }],
+    })
+    const ctx = makeHoaCtx({
+      request: { method: 'GET', url: '/api/users/' },
+      state: {},
+    })
+    const next = vi.fn(noop)
+    await middleware(ctx, next)
+    // 匹配 → protected, 无 user → 401
+    expect(next).not.toHaveBeenCalled()
+    expect((ctx as any).res.status).toBe(401)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createJwtPermission — integration test (real HTTP server)
+// ---------------------------------------------------------------------------
+
+describe('createJwtPermission – integration test', () => {
+  const { createServer } = require('node:http') as typeof import('node:http')
+
+  /** Minimal Koa-like server wrapper for integration testing */
+  function createTestApp(
+    middleware: ReturnType<typeof createJwtPermission>,
+    user?: unknown,
+  ) {
+    return createServer(async (req, res) => {
+      const ctx: PermissionContext = {
+        request: { method: req.method, url: req.url },
+        state: user !== undefined ? { user } : {},
+        res: { status: undefined, body: undefined },
+      }
+      await middleware(ctx, async () => {
+        res.statusCode = 200
+        res.end('OK')
+      })
+      if (ctx.res?.status) {
+        res.statusCode = ctx.res.status
+        res.end(JSON.stringify(ctx.res.body))
+      }
+    })
+  }
+
+  it('returns 200 for public route', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [{ method: 'GET', path: '/api/health' }],
+    })
+    const server = createTestApp(middleware)
+    await new Promise<void>(resolve => server.listen(0, resolve))
+    const { port } = server.address() as { port: number }
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/health`)
+      expect(res.status).toBe(200)
+      expect(await res.text()).toBe('OK')
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
+  })
+
+  it('returns 200 for protected route with user', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/profile' }],
+    })
+    const server = createTestApp(middleware, { id: 1, name: 'alice' })
+    await new Promise<void>(resolve => server.listen(0, resolve))
+    const { port } = server.address() as { port: number }
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/profile`)
+      expect(res.status).toBe(200)
+      expect(await res.text()).toBe('OK')
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
+  })
+
+  it('returns 401 for protected route without user', async () => {
+    const middleware = createJwtPermission({
+      protectedRoutes: [{ method: 'GET', path: '/api/profile' }],
+    })
+    const server = createTestApp(middleware)
+    await new Promise<void>(resolve => server.listen(0, resolve))
+    const { port } = server.address() as { port: number }
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/profile`)
+      expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.code).toBe('UNAUTHORIZED')
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
+  })
+
+  it('returns 401 for unknown route with defaultDeny: true', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [{ method: 'GET', path: '/api/health' }],
+      defaultDeny: true,
+    })
+    const server = createTestApp(middleware)
+    await new Promise<void>(resolve => server.listen(0, resolve))
+    const { port } = server.address() as { port: number }
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/unknown`)
+      expect(res.status).toBe(401)
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
+  })
+
+  it('returns 200 for unknown route without defaultDeny', async () => {
+    const middleware = createJwtPermission({
+      publicRoutes: [{ method: 'GET', path: '/api/health' }],
+    })
+    const server = createTestApp(middleware)
+    await new Promise<void>(resolve => server.listen(0, resolve))
+    const { port } = server.address() as { port: number }
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/unknown`)
+      expect(res.status).toBe(200)
+      expect(await res.text()).toBe('OK')
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
   })
 })
 

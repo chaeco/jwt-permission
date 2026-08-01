@@ -6,6 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.0] - 2026-08-02
+
+### Added
+
+- **`defaultDeny` option** — when `true`, routes not matching any rule return 401 instead of passing through (recommended for production)
+- **`onUnauthorized` callback** — audit/logging hook invoked with `'no_user'` or `'default_deny'` reason when a request is rejected
+- **`RouterApp` type** — exported minimal interface for typed `app.$routes` access
+- **`defaultDeny: true` + `onUnauthorized` pattern** — recommended production configuration
+
+### Fixed
+
+- **Bug: `onUnauthorized` throw blocks response** — callback errors are now caught and silently ignored so the unauthorized response is always sent
+- **Bug: `res: null` crash in `defaultUnauthorizedResponse`** — `ctx.res !== undefined` → `ctx.res != null` (safe for both `null` and `undefined`)
+- **Bug: `init-skills` ESM compatibility** — `scripts/init-skills.js` renamed to `.mjs` to fix `SyntaxError` on Node 18/20
+
+### Changed
+
+- **Simplified auto-discovery logic** — route resolution hoisted to factory function, eliminating per-request conditional overhead
+- **Removed redundant `jwtPermission` alias** — `jwtAuth` remains the single recommended alias; `createJwtPermission` for generic use
+- **`scripts/init-skills.js` → `scripts/init-skills.mjs`** — explicit ESM extension for cross-version Node.js compatibility
+
+### Tests
+
+- Expanded from 56 to **78 tests**
+- Added: `defaultDeny` (5), `onUnauthorized` (5, including throw-safety), `res: null` (1), trailing-slash significance (2), falsy `state.user` values (5), real HTTP server integration (5)
+- Coverage: **100% statements / branches / functions / lines**
+
+### Docs
+
+- README (EN + ZH): options table, request flow diagram, FAQ updated for `defaultDeny`/`onUnauthorized`
+- CLAUDE.md: Common Mistakes, exported types (`RouterApp`), AI guardrails
+- Skill files (Claude Code + Codex): options table, guardrails updated
+
+---
+
 ## [1.0.2] - 2026-06-09
 
 ### Added

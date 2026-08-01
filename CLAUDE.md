@@ -150,13 +150,14 @@ async function handler(ctx) {
 3. **Wildcards in route rules** — use `isPublicRoute`/`isProtectedRoute` instead
 4. **Assuming `jwtAuth` verifies tokens** — it doesn't. Token verification is the upstream middleware's job
 5. **Route paths without leading `/`** — all paths must start with `/`
+6. **Unknown routes pass through by default** — set `defaultDeny: true` to reject unknown routes in production
+7. **No audit trail for unauthorized access** — use `onUnauthorized` callback to log or metric rejected requests
 
 ## Exported API
 
 | Export | Purpose |
 |--------|---------|
 | `jwtAuth(options)` | Create middleware (alias for `createJwtPermission`) |
-| `jwtPermission(options)` | Same as `jwtAuth` |
 | `createJwtPermission<T>(options)` | Create middleware with explicit generic context type |
 | `getCurrentUser(ctx)` | Read authenticated user from context |
 | `isAuthenticated(ctx)` | Check if request is authenticated |
@@ -170,5 +171,6 @@ import type {
   PermissionMiddleware,
   RouteRule,
   JwtPermissionOptions,
+  RouterApp,
 } from '@chaeco/jwt-permission'
 ```

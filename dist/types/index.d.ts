@@ -1,5 +1,12 @@
 /** 合法的 HTTP 请求方法 */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+/** autoRouter 应用的最小接口约定 */
+export interface RouterApp {
+    $routes?: {
+        publicRoutes?: RouteRule[];
+        protectedRoutes?: RouteRule[];
+    };
+}
 /**
  * 中间件上下文的最小接口约定，框架无关
  *
@@ -92,6 +99,18 @@ export interface JwtPermissionOptions<TContext extends PermissionContext = Permi
      */
     isPublicRoute?: (method: string, path: string) => boolean;
     isProtectedRoute?: (method: string, path: string) => boolean;
+    /**
+     * 是否对未匹配任何路由规则的请求返回 401
+     * - false（默认）：未匹配路由直接放行（宽松模式）
+     * - true：未匹配路由返回 401（严格模式，推荐生产环境使用）
+     */
+    defaultDeny?: boolean;
+    /**
+     * 未授权请求时的回调钩子（用于日志、审计、监控指标）
+     * @param ctx 框架上下文
+     * @param reason 拒绝原因
+     */
+    onUnauthorized?: (ctx: TContext, reason: 'no_user' | 'default_deny') => void;
 }
 /**
  * 创建 JWT 权限中间件
@@ -120,11 +139,7 @@ export interface JwtPermissionOptions<TContext extends PermissionContext = Permi
  */
 export declare function createJwtPermission<TContext extends PermissionContext = PermissionContext>(options?: JwtPermissionOptions<TContext>): PermissionMiddleware<TContext>;
 /**
- * createJwtPermission 的别名，可按个人偏好选用
- */
-export declare const jwtPermission: typeof createJwtPermission;
-/**
- * createJwtPermission 的别名，可按个人偏好选用
+ * createJwtPermission 的别名
  */
 export declare const jwtAuth: typeof createJwtPermission;
 /**

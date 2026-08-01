@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.jwtAuth = exports.jwtPermission = void 0;
+exports.jwtAuth = void 0;
 exports.createJwtPermission = createJwtPermission;
 exports.getCurrentUser = getCurrentUser;
 exports.isAuthenticated = isAuthenticated;
@@ -16,7 +16,7 @@ function defaultUnauthorizedResponse(ctx) {
         message: '访问此资源需要有效的 JWT token',
         code: 'UNAUTHORIZED',
     };
-    if (ctx.res !== undefined) {
+    if (ctx.res != null) {
         // Hoa 风格
         ctx.res.status = 401;
         ctx.res.body = body;
@@ -87,39 +87,48 @@ function matchesRoute(routes, method, path) {
  *   // 此时会自动读取 app.$routes 中的路由信息
  */
 function createJwtPermission(options = {}) {
-    const { publicRoutes: userPublicRoutes, protectedRoutes: userProtectedRoutes, autoDiscovery = true, unauthorizedResponse = defaultUnauthorizedResponse, isPublicRoute: customIsPublicRoute, isProtectedRoute: customIsProtectedRoute, } = options;
-    // 两侧均由自定义函数覆盖时，无需解析内置路由列表；此值由初始化选项决定，运行期不变，提前计算避免每次请求重复运算
+    const { publicRoutes: userPublicRoutes, protectedRoutes: userProtectedRoutes, autoDiscovery = true, defaultDeny = false, unauthorizedResponse = defaultUnauthorizedResponse, onUnauthorized, isPublicRoute: customIsPublicRoute, isProtectedRoute: customIsProtectedRoute, } = options;
+    // 两侧均由自定义函数覆盖时，无需解析内置路由列表
     const needBuiltinRoutes = !customIsPublicRoute || !customIsProtectedRoute;
-    // 缓存自动发现的路由，避免每次请求重复读取 app.$routes
-    // 注意：路由在首次请求时读取并固定，后续运行时动态注册的路由不会被感知
-    let cachedPublicRoutes;
-    let cachedProtectedRoutes;
+    // 当 autoDiscovery 关闭或两侧路由均已提供时，在工厂函数中一次性解析完毕
+    // 否则需要延迟到请求时通过 autoDiscovery 从 app.$routes 读取
+    // 注意：运行时动态注册的路由不会被感知
+    let resolvedPublicRoutes;
+    let resolvedProtectedRoutes;
+    let needsRuntimeDiscovery;
+    if (needBuiltinRoutes) {
+        const bothProvided = !!(userPublicRoutes && userProtectedRoutes);
+        if (!autoDiscovery || bothProvided) {
+            resolvedPublicRoutes = userPublicRoutes ?? [];
+            resolvedProtectedRoutes = userProtectedRoutes ?? [];
+            needsRuntimeDiscovery = false;
+        }
+        else {
+            resolvedPublicRoutes = userPublicRoutes;
+            resolvedProtectedRoutes = userProtectedRoutes;
+            needsRuntimeDiscovery = true;
+        }
+    }
+    else {
+        needsRuntimeDiscovery = false;
+    }
     return async (ctx, next) => {
-        // 默认空数组，仅在 needBuiltinRoutes 时按需填充
         let publicRoutes = [];
         let protectedRoutes = [];
         if (needBuiltinRoutes) {
-            if (autoDiscovery && (!userPublicRoutes || !userProtectedRoutes)) {
-                // 仅在各自未缓存时才读取 app.$routes，避免已提供一侧导致另一侧永远触发查询
-                const needPublic = !userPublicRoutes && cachedPublicRoutes === undefined;
-                const needProtected = !userProtectedRoutes && cachedProtectedRoutes === undefined;
-                if (needPublic || needProtected) {
-                    // ctx.app 已在 PermissionContext 中声明，无需强转
+            if (needsRuntimeDiscovery && (!resolvedPublicRoutes || !resolvedProtectedRoutes)) {
+                // 按需从 app.$routes 读取并缓存，仅补充缺失的一侧
+                if (resolvedPublicRoutes === undefined) {
                     const app = (ctx.app ?? ctx.state?.app);
-                    if (app?.$routes) {
-                        if (needPublic)
-                            cachedPublicRoutes = app.$routes.publicRoutes ?? [];
-                        if (needProtected)
-                            cachedProtectedRoutes = app.$routes.protectedRoutes ?? [];
-                    }
+                    resolvedPublicRoutes = app?.$routes?.publicRoutes ?? [];
                 }
-                publicRoutes = userPublicRoutes ?? cachedPublicRoutes ?? [];
-                protectedRoutes = userProtectedRoutes ?? cachedProtectedRoutes ?? [];
+                if (resolvedProtectedRoutes === undefined) {
+                    const app = (ctx.app ?? ctx.state?.app);
+                    resolvedProtectedRoutes = app?.$routes?.protectedRoutes ?? [];
+                }
             }
-            else {
-                publicRoutes = userPublicRoutes ?? [];
-                protectedRoutes = userProtectedRoutes ?? [];
-            }
+            publicRoutes = resolvedPublicRoutes;
+            protectedRoutes = resolvedProtectedRoutes;
         }
         // 统一转为大写，兼容路由规则大小写不一致的情况
         const method = (ctx.request?.method ?? ctx.req?.method ?? 'GET').toUpperCase();
@@ -151,22 +160,30 @@ function createJwtPermission(options = {}) {
         // 受保护路由：检查上游 JWT 解析中间件是否已将用户信息写入 ctx.state.user
         if (isProtected) {
             if (!ctx.state?.user) {
+                try {
+                    onUnauthorized?.(ctx, 'no_user');
+                }
+                catch { /* 回调错误不应阻塞响应 */ }
                 unauthorizedResponse(ctx);
                 return;
             }
             await next?.();
             return;
         }
-        // 未在任何路由列表中的路由：默认放行
+        // 未在任何路由列表中的路由
+        if (defaultDeny) {
+            try {
+                onUnauthorized?.(ctx, 'default_deny');
+            }
+            catch { /* 回调错误不应阻塞响应 */ }
+            unauthorizedResponse(ctx);
+            return;
+        }
         await next?.();
     };
 }
 /**
- * createJwtPermission 的别名，可按个人偏好选用
- */
-exports.jwtPermission = createJwtPermission;
-/**
- * createJwtPermission 的别名，可按个人偏好选用
+ * createJwtPermission 的别名
  */
 exports.jwtAuth = createJwtPermission;
 /**

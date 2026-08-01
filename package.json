@@ -1,12 +1,12 @@
 {
   "name": "@chaeco/jwt-permission",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Framework-agnostic JWT permission middleware for Node.js (Hoa, Koa, Express, etc.)",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
   "bin": {
-    "jwt-permission-init-skills": "scripts/init-skills.js"
+    "jwt-permission-init-skills": "scripts/init-skills.mjs"
   },
   "exports": {
     ".": {
@@ -37,7 +37,7 @@
     "dist",
     ".claude/skills/jwt-permission",
     ".codex/skills/jwt-permission",
-    "scripts/init-skills.js",
+    "scripts/init-skills.mjs",
     "CHANGELOG.md",
     "README.md",
     "README-zh.md"

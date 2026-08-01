@@ -2,7 +2,7 @@
 
 [English](./README.md) | 中文
 
-[![version](https://img.shields.io/badge/version-1.0.1-blue.svg)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.1.0-blue.svg)](./CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](./coverage)
@@ -106,6 +106,8 @@ async function getInfoHandler(ctx) {
   - `unauthorizedResponse` (function) - 自定义未授权响应
   - `isPublicRoute` (function) - 自定义公开路由检查逻辑
   - `isProtectedRoute` (function) - 自定义受保护路由检查逻辑
+  - `defaultDeny` (boolean) - 未匹配路由返回 401（默认 false，生产环境建议开启）
+  - `onUnauthorized` (function) - 请求被拒绝时回调（参数：`reason: 'no_user' | 'default_deny'`）
 
 **返回**：`PermissionMiddleware<TContext>`
 
@@ -260,7 +262,9 @@ app.use(jwtAuth({ autoDiscovery: true }))
   ├─ 检查是否受保护路由
   │  ├─ 有 ctx.state.user → 放行
   │  └─ 无 ctx.state.user → 返回 401
-  └─ 其他路由 → 放行
+  └─ 其他路由
+     ├─ defaultDeny: true  → 返回 401
+     └─ defaultDeny: false → 放行（默认）
   ↓
 处理器（业务逻辑）
 ```
@@ -432,6 +436,17 @@ unauthorizedResponse: ctx => {
   ctx.res.status = 403
   ctx.res.body = { error: '无权访问' }
 }
+```
+
+**Q: 不在路由列表中的请求会怎样？**
+
+A: 默认放行（宽松模式）。生产环境建议开启 `defaultDeny: true`，未匹配路由将返回 401：
+
+```typescript
+jwtAuth({
+  defaultDeny: true,
+  // 未匹配的路由 → 401
+})
 ```
 
 ## 性能说明

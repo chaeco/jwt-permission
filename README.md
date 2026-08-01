@@ -2,7 +2,7 @@
 
 English | [中文](./README-zh.md)
 
-[![version](https://img.shields.io/badge/version-1.0.1-blue.svg)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.1.0-blue.svg)](./CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](./coverage)
@@ -107,6 +107,8 @@ Creates a JWT permission middleware (shorthand alias for `createJwtPermission`).
 | `unauthorizedResponse` | `(ctx) => void` | built-in | Custom 401 response handler |
 | `isPublicRoute` | `(method, path) => boolean` | — | Custom public route matcher (overrides built-in) |
 | `isProtectedRoute` | `(method, path) => boolean` | — | Custom protected route matcher (overrides built-in) |
+| `defaultDeny` | `boolean` | `false` | Reject unknown routes with 401 (recommended for production) |
+| `onUnauthorized` | `(ctx, reason) => void` | — | Callback when request is rejected: `'no_user'` or `'default_deny'` |
 
 **Returns**: `PermissionMiddleware<TContext>`
 
@@ -263,7 +265,9 @@ Incoming request
   ├─ Protected route?
   │  ├─ ctx.state.user exists → pass through
   │  └─ ctx.state.user absent → return 401
-  └─ Unknown route    → pass through (default allow)
+  └─ Unknown route
+     ├─ defaultDeny: true  → return 401
+     └─ defaultDeny: false → pass through (default)
   ↓
 Route handler (business logic)
 ```
@@ -402,7 +406,14 @@ Mark the refresh endpoint as a public route:
 
 **Q: What happens to routes not in either list?**
 
-They are allowed through by default (pass-through behavior).
+They are allowed through by default (pass-through behavior). To reject unknown routes in production, use `defaultDeny: true`:
+
+```typescript
+jwtAuth({
+  defaultDeny: true,
+  // unknown routes → 401
+})
+```
 
 ## Performance
 

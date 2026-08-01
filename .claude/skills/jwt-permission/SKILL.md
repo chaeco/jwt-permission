@@ -60,6 +60,8 @@ provide a custom `unauthorizedResponse`.
 | `unauthorizedResponse` | `(ctx) => void` | built-in | Custom 401 handler |
 | `isPublicRoute` | `(method, path) => boolean` | — | Custom public matcher |
 | `isProtectedRoute` | `(method, path) => boolean` | — | Custom protected matcher |
+| `defaultDeny` | `boolean` | `false` | Reject unknown routes with 401 (recommended for production) |
+| `onUnauthorized` | `(ctx, reason) => void` | — | Callback when request is rejected: `'no_user'` or `'default_deny'` |
 
 ### Guardrails
 
@@ -68,6 +70,8 @@ provide a custom `unauthorizedResponse`.
 - ❌ Never assume `jwtAuth` verifies tokens — it only checks `ctx.state.user`
 - ❌ Never forget `unauthorizedResponse` for Express — the built-in only covers Hoa/Koa
 - ❌ Never use paths without a leading `/`
+- ❌ Never rely on "unknown route = pass through" in production — set `defaultDeny: true`
+- ❌ Never ignore `onUnauthorized` for audit logging — always wire it up in production
 
 ### Framework examples
 
