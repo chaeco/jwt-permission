@@ -2,7 +2,7 @@
 
 English | [中文](./README-zh.md)
 
-[![version](https://img.shields.io/badge/version-1.1.0-blue.svg)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.1.1-blue.svg)](./CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](./coverage)
@@ -24,16 +24,14 @@ Framework-agnostic JWT route permission middleware for Node.js. Compatible with 
 
 ## Installation
 
-This package is not yet published to npm. Install directly from GitHub:
-
 ```bash
-npm install github:chaeco/jwt-permission
+npm install @chaeco/jwt-permission
 ```
 
-Or pin to a specific tag:
+Or pin to a specific version:
 
 ```bash
-npm install github:chaeco/jwt-permission#v1.0.1
+npm install @chaeco/jwt-permission@1.1.1
 ```
 
 ## Quick Start

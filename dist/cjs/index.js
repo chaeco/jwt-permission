@@ -29,11 +29,13 @@ function defaultUnauthorizedResponse(ctx) {
 }
 /**
  * 模块级路由正则缓存（所有中间件实例共享）
- * 路由路径是静态字符串，共享缓存安全且能减少重复编译
+ * 路由路径是静态字符串，共享缓存安全且能减少重复编译。
+ * 采用 LRU 淘汰，上限防止动态路由场景下缓存无限增长。
  */
 const _regexCache = new Map();
+const _REGEX_CACHE_MAX = 1000;
 /**
- * 将路由路径转换为正则表达式（结果会被缓存）
+ * 将路由路径转换为正则表达式（结果会被缓存，LRU 淘汰）
  * - 对静态路径段进行转义，避免 `.`、`+` 等特殊字符被解释为正则元字符
  * - 将 :param 风格的动态段替换为 [^/]+
  *
@@ -41,8 +43,12 @@ const _regexCache = new Map();
  */
 function pathToRegex(routePath) {
     const cached = _regexCache.get(routePath);
-    if (cached)
+    if (cached) {
+        // 刷新 LRU 顺序
+        _regexCache.delete(routePath);
+        _regexCache.set(routePath, cached);
         return cached;
+    }
     const pattern = routePath
         .split('/')
         .map(segment => segment.startsWith(':')
@@ -51,6 +57,12 @@ function pathToRegex(routePath) {
         .join('/');
     const regex = new RegExp(`^${pattern}$`);
     _regexCache.set(routePath, regex);
+    // 超限时淘汰最早插入的项
+    if (_regexCache.size > _REGEX_CACHE_MAX) {
+        const oldest = _regexCache.keys().next().value;
+        if (oldest !== undefined)
+            _regexCache.delete(oldest);
+    }
     return regex;
 }
 /**

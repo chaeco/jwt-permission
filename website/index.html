@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JWT Permission — 路由权限中间件</title>
+  <meta name="description" content="JWT Permission：框架无关的 JWT 路由权限中间件。自动发现路由、路径参数匹配、URL 解码安全、defaultDeny 生产级控制。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0f14'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='18' font-weight='700' fill='%23f59e0b' text-anchor='middle'%3E%F0%9F%94%91%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop__grid"></div>
+    <div class="backdrop__glow"></div>
+  </div>
+
+  <header class="nav">
+    <div class="nav__inner">
+      <a class="brand" href="#top">
+        <span class="brand__mark" aria-hidden="true">🔑</span>
+        <span class="brand__name">jwt-permission</span>
+      </a>
+      <nav class="nav__links" aria-label="页面导航">
+        <a href="#why">为什么</a>
+        <a href="#modes">配置模式</a>
+        <a href="#demo">用法</a>
+        <a href="#flow">请求流</a>
+        <a href="#install">安装</a>
+      </nav>
+      <a class="btn btn--solid nav__cta" href="#install">开始使用</a>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ── Hero ───────────────────────────────────────────── -->
+    <section class="hero" id="top">
+      <div class="hero__inner">
+        <div class="hero__copy">
+          <p class="eyebrow reveal">框架无关 · 自动发现路由</p>
+          <h1 class="hero__title">
+            <span class="line"><span class="word">只管</span></span>
+            <span class="line"><span class="word accent">权限</span></span>
+            <span class="line"><span class="word">验证</span></span>
+          </h1>
+          <p class="hero__lead reveal">不解析 token、不碰密钥——只检查 <code>ctx.state.user</code> 是否存在。与 Hoa / Koa / Express 及任何使用 <code>ctx.state.user</code> 约定的框架兼容。</p>
+          <div class="hero__actions reveal">
+            <a class="btn btn--solid" href="#install">npm install @chaeco/jwt-permission</a>
+            <a class="btn btn--ghost" href="#demo">看用法 ↓</a>
+          </div>
+        </div>
+
+        <div class="terminal reveal" aria-label="JWT Permission 演示终端">
+          <div class="terminal__bar">
+            <span class="terminal__dot" aria-hidden="true"></span>
+            <span class="terminal__dot" aria-hidden="true"></span>
+            <span class="terminal__dot" aria-hidden="true"></span>
+            <span class="terminal__title">middleware chain</span>
+          </div>
+          <div class="terminal__body">
+            <pre class="terminal__code" id="terminalCode"><code></code></pre>
+            <div class="terminal__output" id="terminalOutput">
+              <div class="terminal__row"><span class="tok-comment">-- 路由分类</span></div>
+              <div class="terminal__row tok-sql" id="termSql"></div>
+              <div class="terminal__row"><span class="tok-comment">-- 检查结果</span></div>
+              <div class="terminal__row tok-param" id="termParams"></div>
+              <div class="terminal__row"><span class="tok-comment">-- 响应</span></div>
+              <div class="terminal__row terminal__result" id="termResult"></div>
+            </div>
+            <div class="terminal__caret" id="terminalCaret" aria-hidden="true">█</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero__scroll-hint" aria-hidden="true">
+        <span>向下滚动</span>
+        <span class="hero__scroll-line"></span>
+      </div>
+    </section>
+
+    <script type="application/json" id="terminalSteps">
+    [
+      {
+        "code": "app.use(jwt({ secret, algorithms: ['HS256'] }))   // 解析 token → ctx.state.user\napp.use(jwtAuth({ autoDiscovery: true }))               // 只检查 user 存在",
+        "sql":    "GET /api/users/info   → 受保护（requiresAuth）",
+        "params": "ctx.state.user 存在 → 放行",
+        "result": "200 OK"
+      },
+      {
+        "code": "POST /api/auth/login  → 公开路由（requiresAuth: false）",
+        "sql":    "跳过 JWT 验证",
+        "params": "无需 ctx.state.user",
+        "result": "200 OK · 放行"
+      },
+      {
+        "code": "GET /api/admin/*      → defaultDeny: true",
+        "sql":    "未知路由 → 401",
+        "params": "onUnauthorized(ctx, 'default_deny')",
+        "result": "401 Unauthorized"
+      }
+    ]
+    </script>
+
+    <!-- ── 事实带 ─────────────────────────────────────────── -->
+    <section class="facts" aria-label="JWT Permission 关键事实">
+      <div class="facts__inner">
+        <div class="fact">
+          <span class="fact__value" data-count="0">0</span>
+          <span class="fact__label">运行时依赖</span>
+        </div>
+        <div class="fact">
+          <span class="fact__value">3+</span>
+          <span class="fact__label">框架兼容（Hoa/Koa/Express）</span>
+        </div>
+        <div class="fact">
+          <span class="fact__value fact__value--mono">1st</span>
+          <span class="fact__label">首次请求缓存路由</span>
+        </div>
+        <div class="fact">
+          <span class="fact__value">100%</span>
+          <span class="fact__label">测试覆盖率</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 为什么 ─────────────────────────────────────────── -->
+    <section class="why section" id="why">
+      <div class="section__head">
+        <p class="eyebrow">为什么是 JWT Permission</p>
+        <h2 class="section__title">权限与认证，各司其职。</h2>
+        <p class="section__sub">token 验证交给上游 JWT 中间件，本库只做一件事：这条路由到底要不要放行。</p>
+      </div>
+      <div class="why__grid">
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">⇄</div>
+          <h3 class="card__title">Auto-Discovery</h3>
+          <p class="card__body">与 <code>@chaeco/auto-router</code> 联动，从 <code>app.$routes</code> 自动读取权限元数据。</p>
+          <pre class="card__code"><code>app.use(jwtAuth({ autoDiscovery: <span class="tok-kw">true</span> }))
+<span class="tok-comment">// 无需手动维护路由列表</span></code></pre>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">?</div>
+          <h3 class="card__title">defaultDeny 生产模式</h3>
+          <p class="card__body">未知路由默认放行；<code>defaultDeny: true</code> 时改为 401——推荐生产环境开启。</p>
+          <pre class="card__code"><code>jwtAuth({
+  defaultDeny: <span class="tok-kw">true</span>,
+  onUnauthorized: (ctx, reason) =&gt; audit(reason),
+})</code></pre>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">!</div>
+          <h3 class="card__title">URL 解码安全</h3>
+          <p class="card__body">路径参数匹配 + URL 解码防护，阻止 <code>%xx</code> 编码绕过攻击。</p>
+          <pre class="card__code"><code>{ method: <span class="tok-str">'GET'</span>, path: <span class="tok-str">'/api/users/:userId'</span> }
+<span class="tok-comment">// 匹配 /api/users/123</span></code></pre>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── 配置模式 ───────────────────────────────────────── -->
+    <section class="honest section" id="modes">
+      <div class="section__head">
+        <p class="eyebrow">配置模式</p>
+        <h2 class="section__title">三种姿势，适配任意框架。</h2>
+        <p class="section__sub">自动发现、手动路由列表、自定义匹配函数——按需选择。</p>
+      </div>
+      <div class="table-wrap reveal">
+        <table>
+          <thead>
+            <tr><th>选项</th><th>类型</th><th>默认</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>autoDiscovery</code></td><td><code>boolean</code></td><td><code>true</code></td><td>从 <code>app.$routes</code> 自动发现</td></tr>
+            <tr><td><code>publicRoutes</code></td><td><code>RouteRule[]</code></td><td>—</td><td>跳过 JWT 验证的路由</td></tr>
+            <tr><td><code>protectedRoutes</code></td><td><code>RouteRule[]</code></td><td>—</td><td>需要 JWT 验证的路由</td></tr>
+            <tr><td><code>defaultDeny</code></td><td><code>boolean</code></td><td><code>false</code></td><td>未知路由返回 401（生产推荐）</td></tr>
+            <tr><td><code>onUnauthorized</code></td><td><code>(ctx, reason) =&gt; void</code></td><td>—</td><td>拒绝审计钩子：<code>'no_user'</code> / <code>'default_deny'</code></td></tr>
+            <tr><td><code>isPublicRoute</code> / <code>isProtectedRoute</code></td><td><code>(method, path) =&gt; boolean</code></td><td>—</td><td>自定义匹配函数（覆盖内置）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── 用法演示 ───────────────────────────────────────── -->
+    <section class="demo section" id="demo">
+      <div class="section__head">
+        <p class="eyebrow">用法</p>
+        <h2 class="section__title">两行接入，按框架配置。</h2>
+        <p class="section__sub">Hoa / Koa / Express 各有对应桥接方式。</p>
+      </div>
+
+      <div class="demo__tabs" role="tablist" aria-label="框架示例">
+        <button class="demo__tab is-active" role="tab" aria-selected="true" aria-controls="tab-hoa" data-tab="hoa">Hoa</button>
+        <button class="demo__tab" role="tab" aria-selected="false" aria-controls="tab-koa" data-tab="koa">Koa</button>
+        <button class="demo__tab" role="tab" aria-selected="false" aria-controls="tab-express" data-tab="express">Express</button>
+      </div>
+
+      <div class="demo__panel is-active" id="tab-hoa" role="tabpanel" data-panel="hoa">
+        <pre class="demo__code"><code><span class="tok-var">import</span> { Hoa } <span class="tok-var">from</span> <span class="tok-str">'hoa'</span>;
+<span class="tok-var">import</span> { jwt } <span class="tok-var">from</span> <span class="tok-str">'@hoajs/jwt'</span>;
+<span class="tok-var">import</span> { jwtAuth } <span class="tok-var">from</span> <span class="tok-str">'@chaeco/jwt-permission'</span>;
+
+<span class="tok-var">const</span> app = <span class="tok-var">new</span> Hoa();
+
+app.use(jwt({ secret: process.env.JWT_SECRET!, algorithms: [<span class="tok-str">'HS256'</span>] }));
+app.use(jwtAuth({ autoDiscovery: <span class="tok-kw">true</span> }));
+app.extend(autoRouter({ defaultRequiresAuth: <span class="tok-kw">false</span> }));
+
+app.listen(<span class="tok-num">3000</span>);</code></pre>
+      </div>
+
+      <div class="demo__panel" id="tab-koa" role="tabpanel" data-panel="koa">
+        <pre class="demo__code"><code><span class="tok-var">import</span> Koa <span class="tok-var">from</span> <span class="tok-str">'koa'</span>;
+<span class="tok-var">import</span> koaJwt <span class="tok-var">from</span> <span class="tok-str">'koa-jwt'</span>;
+<span class="tok-var">import</span> { jwtAuth } <span class="tok-var">from</span> <span class="tok-str">'@chaeco/jwt-permission'</span>;
+
+<span class="tok-var">const</span> app = <span class="tok-var">new</span> Koa();
+
+app.use(koaJwt({ secret: process.env.JWT_SECRET! }));
+app.use(jwtAuth({
+  publicRoutes: [{ method: <span class="tok-str">'POST'</span>, path: <span class="tok-str">'/api/auth/login'</span> }],
+  protectedRoutes: [{ method: <span class="tok-str">'GET'</span>, path: <span class="tok-str">'/api/profile'</span> }],
+}));
+
+app.listen(<span class="tok-num">3000</span>);</code></pre>
+      </div>
+
+      <div class="demo__panel" id="tab-express" role="tabpanel" data-panel="express">
+        <pre class="demo__code"><code><span class="tok-var">import</span> express <span class="tok-var">from</span> <span class="tok-str">'express'</span>;
+<span class="tok-var">import</span> { expressjwt } <span class="tok-var">from</span> <span class="tok-str">'express-jwt'</span>;
+<span class="tok-var">import</span> { jwtAuth } <span class="tok-var">from</span> <span class="tok-str">'@chaeco/jwt-permission'</span>;
+
+<span class="tok-var">const</span> app = express();
+
+<span class="tok-comment">// 桥接：req.auth → ctx.state.user</span>
+app.use((req, res, next) =&gt; {
+  expressjwt({ secret: process.env.JWT_SECRET!, algorithms: [<span class="tok-str">'HS256'</span>] })(req, res, () =&gt; {
+    (req <span class="tok-kw">as any</span>).state = { user: (req <span class="tok-kw">as any</span>).auth };
+    next();
+  });
+});
+
+<span class="tok-comment">// Express 需要自定义 unauthorizedResponse</span>
+app.use(jwtAuth({
+  publicRoutes: [{ method: <span class="tok-str">'POST'</span>, path: <span class="tok-str">'/api/auth/login'</span> }],
+  unauthorizedResponse: ctx =&gt; {
+    (ctx <span class="tok-kw">as any</span>).res.status(<span class="tok-num">401</span>).json({ code: <span class="tok-str">'UNAUTHORIZED'</span> });
+  },
+}));</code></pre>
+      </div>
+    </section>
+
+    <!-- ── 请求流 ─────────────────────────────────────────── -->
+    <section class="honest section" id="flow">
+      <div class="section__head">
+        <p class="eyebrow">请求流</p>
+        <h2 class="section__title">一条请求，三步判定。</h2>
+        <p class="section__sub">JWT 解析 → 路由注册 → 权限检查，顺序不可颠倒。</p>
+      </div>
+      <div class="why__grid">
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">1</div>
+          <h3 class="card__title">JWT 解析中间件</h3>
+          <p class="card__body">验证签名与过期时间，把解码后的 payload 写入 <code>ctx.state.user</code>。</p>
+          <pre class="card__code"><code>app.use(jwt({ secret, algorithms: [<span class="tok-str">'HS256'</span>] }))</code></pre>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">2</div>
+          <h3 class="card__title">autoRouter 注册</h3>
+          <p class="card__body">扫描控制器目录，收集 <code>requiresAuth</code> 元数据，存入 <code>app.$routes</code>。</p>
+          <pre class="card__code"><code>app.extend(autoRouter({ dir: <span class="tok-str">'./controllers'</span> }))</code></pre>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon" aria-hidden="true">3</div>
+          <h3 class="card__title">jwtAuth 判定</h3>
+          <p class="card__body">公开路由放行 → 受保护路由检查 user → 未知路由按 <code>defaultDeny</code> 决定。</p>
+          <pre class="card__code"><code>app.use(jwtAuth({ autoDiscovery: <span class="tok-kw">true</span> }))</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── 安装 / CTA ─────────────────────────────────────── -->
+    <section class="cta section" id="install">
+      <div class="cta__box">
+        <p class="eyebrow">开始使用</p>
+        <h2 class="cta__title">权限，两行接入。</h2>
+        <pre class="cta__cmd"><code>$ npm install @chaeco/jwt-permission</code><span class="cta__cursor" aria-hidden="true"></span></pre>
+        <p class="cta__note">零运行时依赖 · 全 TypeScript · MIT</p>
+        <div class="cta__actions">
+          <a class="btn btn--solid" href="https://github.com/chaeco/jwt-permission" target="_blank" rel="noopener">GitHub →</a>
+          <a class="btn btn--ghost" href="https://github.com/chaeco/jwt-permission#readme" target="_blank" rel="noopener">阅读文档</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="brand"><span class="brand__mark" aria-hidden="true">🔑</span> jwt-permission</span>
+      <p>只管权限 · 验证归你 · 零依赖</p>
+      <p class="footer__meta">MIT License · @chaeco/jwt-permission</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

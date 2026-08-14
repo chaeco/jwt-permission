@@ -2,7 +2,7 @@
 
 [English](./README.md) | 中文
 
-[![version](https://img.shields.io/badge/version-1.1.0-blue.svg)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.1.1-blue.svg)](./CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](./coverage)
@@ -24,16 +24,14 @@
 
 ## 安装
 
-此包尚未发布到 npm，可直接从 GitHub 安装：
-
 ```bash
-npm install github:chaeco/jwt-permission
+npm install @chaeco/jwt-permission
 ```
 
-或指定版本标签：
+或固定版本：
 
 ```bash
-npm install github:chaeco/jwt-permission#v1.0.1
+npm install @chaeco/jwt-permission@1.1.1
 ```
 
 ## 快速开始

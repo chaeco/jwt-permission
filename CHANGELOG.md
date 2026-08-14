@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.1] - 2026-08-14
+
+### Fixed
+
+- **Route-regex cache bounded** — the module-level `pathToRegex` cache now uses LRU eviction with a 1000-entry cap, preventing unbounded memory growth under dynamically registered route sets.
+
+### Changed
+
+- **Install docs** — READMEs (EN/ZH) now document `npm install @chaeco/jwt-permission@1.1.1` (the package is published to npm); the previous "install from GitHub" instructions and stale version pin were removed.
+
+### Added
+
+- **Project website** — `website/` landing page (unified Chaeco dark-terminal style) with live terminal demo, config-mode reference, framework tabs, and install CTA.
+- **GitHub Pages workflow** — `.github/workflows/pages.yml` deploys `website/` to GitHub Pages.
+
 ## [1.1.0] - 2026-08-02
 
 ### Added
