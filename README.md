@@ -31,7 +31,7 @@ npm install @chaeco/jwt-permission
 Or pin to a specific version:
 
 ```bash
-npm install @chaeco/jwt-permission@1.1.1
+npm install @chaeco/jwt-permission@1.1.2
 ```
 
 ## Quick Start

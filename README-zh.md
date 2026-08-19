@@ -31,7 +31,7 @@ npm install @chaeco/jwt-permission
 或固定版本：
 
 ```bash
-npm install @chaeco/jwt-permission@1.1.1
+npm install @chaeco/jwt-permission@1.1.2
 ```
 
 ## 快速开始

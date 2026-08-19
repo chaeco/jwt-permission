@@ -92,7 +92,7 @@ function matchesRoute(routes, method, path) {
  *   app.use(createJwtPermission())
  *   // 此时会自动读取 app.$routes 中的路由信息
  */
-export function createJwtPermission(options = {}) {
+function createJwtPermission(options = {}) {
     const { publicRoutes: userPublicRoutes, protectedRoutes: userProtectedRoutes, autoDiscovery = true, defaultDeny = false, unauthorizedResponse = defaultUnauthorizedResponse, onUnauthorized, isPublicRoute: customIsPublicRoute, isProtectedRoute: customIsProtectedRoute, } = options;
     // 两侧均由自定义函数覆盖时，无需解析内置路由列表
     const needBuiltinRoutes = !customIsPublicRoute || !customIsProtectedRoute;
@@ -191,13 +191,13 @@ export function createJwtPermission(options = {}) {
 /**
  * createJwtPermission 的别名
  */
-export const jwtAuth = createJwtPermission;
+const jwtAuth = createJwtPermission;
 /**
  * 获取当前请求的用户信息
  * @param ctx 框架上下文
  * @returns 用户对象，未认证时返回 null
  */
-export function getCurrentUser(ctx) {
+function getCurrentUser(ctx) {
     return ctx.state?.user ?? null;
 }
 /**
@@ -205,6 +205,9 @@ export function getCurrentUser(ctx) {
  * @param ctx 框架上下文
  * @returns 已认证返回 true，否则返回 false
  */
-export function isAuthenticated(ctx) {
+function isAuthenticated(ctx) {
     return getCurrentUser(ctx) !== null;
 }
+
+export { createJwtPermission, getCurrentUser, isAuthenticated, jwtAuth };
+//# sourceMappingURL=index.js.map

@@ -1,7 +1,7 @@
 /** 合法的 HTTP 请求方法 */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 /** autoRouter 应用的最小接口约定 */
-export interface RouterApp {
+interface RouterApp {
     $routes?: {
         publicRoutes?: RouteRule[];
         protectedRoutes?: RouteRule[];
@@ -15,7 +15,7 @@ export interface RouterApp {
  * - Koa：ctx.status / ctx.body（响应直接写在 ctx 上）
  * - Express / 其他：可通过 options.unauthorizedResponse 完全自定义
  */
-export interface PermissionContext {
+interface PermissionContext {
     /** 框架封装的请求对象（Koa/Hoa 风格） */
     request?: {
         method?: string;
@@ -51,11 +51,11 @@ export interface PermissionContext {
  * 框架无关的中间件类型
  * next 为可选，兼容不传 next 的调用方式
  */
-export type PermissionMiddleware<TContext extends PermissionContext = PermissionContext> = (ctx: TContext, next?: () => Promise<void>) => Promise<void>;
+type PermissionMiddleware<TContext extends PermissionContext = PermissionContext> = (ctx: TContext, next?: () => Promise<void>) => Promise<void>;
 /**
  * 路由配置对象
  */
-export interface RouteRule {
+interface RouteRule {
     /** HTTP 方法，大小写不敏感 */
     method: HttpMethod | Lowercase<HttpMethod>;
     /**
@@ -70,7 +70,7 @@ export interface RouteRule {
  * JWT 权限中间件选项
  * @template TContext 框架上下文类型，默认为 PermissionContext
  */
-export interface JwtPermissionOptions<TContext extends PermissionContext = PermissionContext> {
+interface JwtPermissionOptions<TContext extends PermissionContext = PermissionContext> {
     /**
      * 公开路由列表（无需 JWT 验证）
      * 若不提供，将尝试从 app.$routes.publicRoutes 自动读取
@@ -137,20 +137,23 @@ export interface JwtPermissionOptions<TContext extends PermissionContext = Permi
  *   app.use(createJwtPermission())
  *   // 此时会自动读取 app.$routes 中的路由信息
  */
-export declare function createJwtPermission<TContext extends PermissionContext = PermissionContext>(options?: JwtPermissionOptions<TContext>): PermissionMiddleware<TContext>;
+declare function createJwtPermission<TContext extends PermissionContext = PermissionContext>(options?: JwtPermissionOptions<TContext>): PermissionMiddleware<TContext>;
 /**
  * createJwtPermission 的别名
  */
-export declare const jwtAuth: typeof createJwtPermission;
+declare const jwtAuth: typeof createJwtPermission;
 /**
  * 获取当前请求的用户信息
  * @param ctx 框架上下文
  * @returns 用户对象，未认证时返回 null
  */
-export declare function getCurrentUser<TContext extends PermissionContext = PermissionContext>(ctx: TContext): unknown;
+declare function getCurrentUser<TContext extends PermissionContext = PermissionContext>(ctx: TContext): unknown;
 /**
  * 检查当前请求是否已通过认证
  * @param ctx 框架上下文
  * @returns 已认证返回 true，否则返回 false
  */
-export declare function isAuthenticated<TContext extends PermissionContext = PermissionContext>(ctx: TContext): boolean;
+declare function isAuthenticated<TContext extends PermissionContext = PermissionContext>(ctx: TContext): boolean;
+
+export { createJwtPermission, getCurrentUser, isAuthenticated, jwtAuth };
+export type { HttpMethod, JwtPermissionOptions, PermissionContext, PermissionMiddleware, RouteRule, RouterApp };

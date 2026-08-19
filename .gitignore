@@ -137,3 +137,7 @@ out
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .DS_Store
+
+# Local AI assistant files (not published)
+AGENTS.md
+.agents/

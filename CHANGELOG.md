@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.2] - 2026-08-19
+
+### Changed
+
+- **Build system → Rollup** — replaced the dual `tsc` passes (esm + cjs) with a unified `rollup` bundle producing `dist/esm` (ESM), `dist/cjs` (CJS), and `dist/types` (bundled declarations via `rollup-plugin-dts`).
+
+---
+
 ## [1.1.1] - 2026-08-14
 
 ### Fixed

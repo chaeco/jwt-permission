@@ -1,9 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.jwtAuth = void 0;
-exports.createJwtPermission = createJwtPermission;
-exports.getCurrentUser = getCurrentUser;
-exports.isAuthenticated = isAuthenticated;
+'use strict';
+
 /**
  * 默认的未授权响应处理
  * - Hoa 风格：写入 ctx.res.status / ctx.res.body
@@ -197,7 +193,7 @@ function createJwtPermission(options = {}) {
 /**
  * createJwtPermission 的别名
  */
-exports.jwtAuth = createJwtPermission;
+const jwtAuth = createJwtPermission;
 /**
  * 获取当前请求的用户信息
  * @param ctx 框架上下文
@@ -214,3 +210,9 @@ function getCurrentUser(ctx) {
 function isAuthenticated(ctx) {
     return getCurrentUser(ctx) !== null;
 }
+
+exports.createJwtPermission = createJwtPermission;
+exports.getCurrentUser = getCurrentUser;
+exports.isAuthenticated = isAuthenticated;
+exports.jwtAuth = jwtAuth;
+//# sourceMappingURL=index.js.map
